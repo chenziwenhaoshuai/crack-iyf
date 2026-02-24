@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "屏蔽视频试看限制(最终版)",
+  "version": "2.0",
+  "description": "全框架拦截试看限制",
+  "content_scripts": [
+    {
+      "matches": ["*://*.yfvod.com/*", "*://*/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    }
+  ]
+}
