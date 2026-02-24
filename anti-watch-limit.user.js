@@ -22,7 +22,7 @@
     if (IS_TOP) {
         const CAPTURED_URLS = new Set();
         let autoHideTimer = null;
-        let timeLeft = 30;
+        let timeLeft = 5;
 
         function startCountdown() {
             if (autoHideTimer) clearInterval(autoHideTimer);
@@ -33,7 +33,7 @@
                 box.style.display = 'flex';
                 box.style.opacity = '1';
             }
-            timeLeft = 30;
+            timeLeft = 5;
             timerEl.innerText = `(${timeLeft}s后隐藏)`;
             timerEl.style.color = '#fa0';
             autoHideTimer = setInterval(() => {
@@ -309,5 +309,6 @@
         }
     }
     setInterval(hookJQuery, 1000);
+
 
 })();
