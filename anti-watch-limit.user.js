@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         屏蔽视频试看限制 & M3U8 捕获（iPhone版）
+// @name         屏蔽视频试看限制 & M3U8 捕获（iPhone版适配）
 // @namespace    http://tampermonkey.net/
-// @version      2.0
-// @description  终极框架：拦截试看、捕获主/子 m3u8、展示UI面板（iPhone Safari 适配）
+// @version      2.1
+// @description  终极框架：拦截试看、捕获主/子 m3u8、展示UI面板（完美适配iPhone竖屏）
 // @match        *://*/*
 // @run-at       document-start
 // @inject-into  page
@@ -17,7 +17,7 @@
     const IS_TOP = window.self === window.top;
 
     // ==========================================
-    // 部分 A: UI 显示 (仅主窗口)
+    // 部分 A: UI 显示 (仅主窗口) - 已针对手机优化
     // ==========================================
     if (IS_TOP) {
         const CAPTURED_URLS = new Set();
@@ -29,20 +29,24 @@
             const timerEl = document.getElementById('m3u8-timer-display');
             const box = document.getElementById('m3u8-master-panel');
             if (!timerEl || !box) return;
+            
+            // 如果面板是隐藏的，显示出来
             if (box.style.display === 'none') {
                 box.style.display = 'flex';
                 box.style.opacity = '1';
             }
+            
             timeLeft = 5;
-            timerEl.innerText = `(${timeLeft}s后隐藏)`;
+            timerEl.innerText = `(${timeLeft}s)`;
             timerEl.style.color = '#fa0';
+            
             autoHideTimer = setInterval(() => {
                 timeLeft--;
                 if (timeLeft <= 0) {
                     clearInterval(autoHideTimer);
                     box.style.display = 'none';
                 } else {
-                    timerEl.innerText = `(${timeLeft}s后隐藏)`;
+                    timerEl.innerText = `(${timeLeft}s)`;
                 }
             }, 1000);
         }
@@ -51,7 +55,7 @@
             if (autoHideTimer) clearInterval(autoHideTimer);
             const timerEl = document.getElementById('m3u8-timer-display');
             if (timerEl) {
-                timerEl.innerText = '(保持显示)';
+                timerEl.innerText = '(保持)';
                 timerEl.style.color = '#0f0';
             }
         }
@@ -61,43 +65,58 @@
 
             const box = document.createElement('div');
             box.id = 'm3u8-master-panel';
+            // 手机适配关键样式修改：使用 left/right 定位，取消固定 width
             box.style.cssText = `
-                position: fixed; top: 10px; right: 10px; z-index: 2147483647;
-                background: #000; color: #fff; width: 460px;
-                border: 2px solid #00aa00; border-radius: 8px;
-                font-family: sans-serif;
-                box-shadow: 0 0 25px rgba(0,255,0,0.2);
-                display: flex; flex-direction: column;
-                max-height: 90vh;
+                position: fixed; 
+                top: 10px; 
+                left: 10px; 
+                right: 10px; 
+                width: auto;
+                z-index: 2147483647;
+                background: rgba(0, 0, 0, 0.95); 
+                color: #fff; 
+                border: 1px solid #00aa00; 
+                border-radius: 8px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+                display: flex; 
+                flex-direction: column;
+                max-height: 80vh; /* 防止遮挡底部导航栏 */
                 transition: opacity 0.3s;
+                font-size: 13px;
             `;
-            box.onmouseenter = pauseCountdown;
-            box.onmouseleave = startCountdown;
+            
+            // 触摸交互处理
+            box.ontouchstart = pauseCountdown;
+            // 点击面板任何空白处暂停倒计时，不使用 mouseleave，因为手机没有鼠标移出
+            box.onclick = pauseCountdown; 
 
             const header = document.createElement('div');
-            header.style.cssText = "padding: 10px; background: #003300; border-bottom: 1px solid #005500; display:flex; justify-content:space-between; align-items:center;";
+            header.style.cssText = "padding: 8px 10px; background: #003300; border-bottom: 1px solid #005500; display:flex; justify-content:space-between; align-items:center; border-radius: 8px 8px 0 0;";
 
             const titleArea = document.createElement('div');
-            titleArea.innerHTML = '<span style="font-weight:bold; font-size:14px;">🕵️ 终极捕获 (V10)</span> ';
+            titleArea.innerHTML = '<span style="font-weight:bold; font-size:14px;">🕵️ M3U8捕获</span> ';
             const timerDisplay = document.createElement('span');
             timerDisplay.id = 'm3u8-timer-display';
-            timerDisplay.style.cssText = "font-size:12px; margin-left:10px; color:#fa0;";
+            timerDisplay.style.cssText = "font-size:12px; margin-left:5px; color:#fa0;";
             titleArea.appendChild(timerDisplay);
             header.appendChild(titleArea);
 
             const controls = document.createElement('div');
             const clearBtn = document.createElement('button');
             clearBtn.innerText = '清空';
-            clearBtn.style.cssText = "cursor:pointer; background:#333; color:#fff; border:none; padding:4px 10px; border-radius:4px; margin-right:8px;";
-            clearBtn.onclick = () => {
+            clearBtn.style.cssText = "cursor:pointer; background:#333; color:#fff; border:none; padding:4px 8px; border-radius:4px; margin-right:8px; font-size:12px;";
+            clearBtn.onclick = (e) => {
+                e.stopPropagation(); // 防止触发 box 点击
                 document.getElementById('m3u8-list-content').innerHTML = '';
                 CAPTURED_URLS.clear();
             };
 
             const closeBtn = document.createElement('button');
             closeBtn.innerText = '隐藏';
-            closeBtn.style.cssText = "cursor:pointer; background:#611; color:#fff; border:none; padding:4px 10px; border-radius:4px;";
-            closeBtn.onclick = () => {
+            closeBtn.style.cssText = "cursor:pointer; background:#611; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:12px;";
+            closeBtn.onclick = (e) => {
+                e.stopPropagation(); // 防止触发 box 点击
                 box.style.display = 'none';
                 if (autoHideTimer) clearInterval(autoHideTimer);
             };
@@ -108,7 +127,7 @@
 
             const content = document.createElement('div');
             content.id = 'm3u8-list-content';
-            content.style.cssText = "overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px;";
+            content.style.cssText = "overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; -webkit-overflow-scrolling: touch;"; // iOS平滑滚动
             box.appendChild(header);
             box.appendChild(content);
             document.body.appendChild(box);
@@ -126,36 +145,44 @@
             const item = document.createElement('div');
 
             let tagColor = '#666';
-            let tagText = '未知链接';
+            let tagText = '未知';
             let borderColor = '#666';
 
             if (url.includes('/hls/') || desc.includes('子链接')) {
                 tagColor = '#0f0';
-                tagText = '🔥 正片 (含切片)';
+                tagText = '🔥正片';
                 borderColor = '#0f0';
             } else if (desc.includes('索引')) {
                 tagColor = '#fa0';
-                tagText = '⚠️ 索引 (跳板)';
+                tagText = '⚠️索引';
                 borderColor = '#fa0';
             }
 
-            item.style.cssText = `background:#1a1a1a; border-left:4px solid ${borderColor}; padding:10px; border-radius:4px; border-bottom:1px solid #333;`;
+            item.style.cssText = `background:#1a1a1a; border-left:3px solid ${borderColor}; padding:8px; border-radius:4px; border-bottom:1px solid #333;`;
 
             item.innerHTML = `
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;">
-                    <div>
-                        <span style="color:${tagColor}; font-weight:bold; border:1px solid ${tagColor}; padding:1px 4px; border-radius:3px;">${tagText}</span>
-                        <span style="color:#888; margin-left:8px;">[${source}]</span>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px;">
+                    <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        <span style="color:${tagColor}; font-weight:bold; border:1px solid ${tagColor}; padding:0px 3px; border-radius:3px; font-size:11px;">${tagText}</span>
+                        <span style="color:#888; margin-left:5px; font-size:11px;">${source}</span>
                     </div>
                 </div>
-                <input value="${url}" readonly style="width:96%; background:#080808; color:#ccc; border:1px solid #333; padding:6px; margin-bottom:6px; font-family:monospace; font-size:11px; display:block;">
-                <button class="copy-btn" style="width:100%; background:#222; color:#aaa; border:1px solid #444; padding:5px; cursor:pointer; font-size:12px;">复制链接</button>
+                <input value="${url}" readonly style="width:100%; box-sizing:border-box; background:#080808; color:#ccc; border:1px solid #333; padding:6px; margin-bottom:6px; font-family:monospace; font-size:11px; display:block; border-radius:3px;">
+                <button class="copy-btn" style="width:100%; box-sizing:border-box; background:#222; color:#aaa; border:1px solid #444; padding:6px; cursor:pointer; font-size:13px; border-radius:4px;">复制链接</button>
             `;
 
             const btn = item.querySelector('.copy-btn');
             const input = item.querySelector('input');
-            input.onclick = () => input.select();
-            btn.onclick = () => {
+            
+            // 阻止输入框点击冒泡，方便复制
+            input.onclick = (e) => {
+                e.stopPropagation();
+                input.select();
+            };
+            
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                pauseCountdown(); // 复制时暂停倒计时
                 input.select();
                 document.execCommand('copy');
                 btn.innerText = '✅ 已复制';
@@ -182,7 +209,7 @@
     }
 
     // ==========================================
-    // 部分 B: 深度解析捕获 (所有窗口运行)
+    // 部分 B: 深度解析捕获 (保持不变)
     // ==========================================
 
     function report(url, source, desc = '') {
@@ -228,7 +255,7 @@
         if (typeof this._targetUrl === 'string' && this._targetUrl.includes('.m3u8')) {
             this.addEventListener('load', function() {
                 const fullUrl = this.responseURL || this._targetUrl;
-                report(fullUrl, '网络请求(XHR)', '可能为索引或正片');
+                report(fullUrl, '网络(XHR)', '可能为索引或正片'); // 缩短文本以适应手机
 
                 let content = '';
                 try {
@@ -253,19 +280,19 @@
         try {
             let url = (typeof input === 'string') ? input : input.url;
             if (url && url.includes('.m3u8')) {
-                report(url, '网络请求(Fetch)', '可能为索引或正片');
+                report(url, '网络(Fetch)', '可能为索引或正片');
                 clone.text().then(text => parseContent(text, url)).catch(() => {});
             }
         } catch (e) {}
         return response;
     };
 
-    // Performance Observer（被动监听）
+    // Performance Observer
     try {
         const observer = new PerformanceObserver(list => {
             list.getEntries().forEach(entry => {
                 if (entry.name.includes('.m3u8')) {
-                    report(entry.name, '网络监听(被动)', '无法判断类型');
+                    report(entry.name, '网络(监听)', '无法判断类型');
                 }
             });
         });
@@ -282,7 +309,7 @@
     }, 2000);
 
     // ==========================================
-    // 部分 C: 试看屏蔽
+    // 部分 C: 试看屏蔽 (保持不变)
     // ==========================================
 
     const originalSetTimeout = window.setTimeout;
@@ -309,6 +336,5 @@
         }
     }
     setInterval(hookJQuery, 1000);
-
 
 })();
